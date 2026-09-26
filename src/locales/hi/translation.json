@@ -1,0 +1,11 @@
+{
+  "search_placeholder": "घटनाएं, इकाइयां खोजें...",
+  "theme_dark": "लाइट मोड पर स्विच करें",
+  "theme_light": "डार्क मोड पर स्विच करें",
+  "nav": {
+    "home": "होम",
+    "orchestrator": "ऑर्केस्ट्रेटर",
+    "zone_control": "ज़ोन कंट्रोल",
+    "escalations": "एस्केलेशन"
+  }
+}

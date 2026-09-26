@@ -127,6 +127,34 @@ export function Layout() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  // Parse current lang from google translate cookie if it exists
+  const getInitialLang = () => {
+    const match = document.cookie.match(/googtrans=\/en\/([a-z]{2})/);
+    return match ? match[1] : 'en';
+  };
+  const [currentLang, setCurrentLang] = useState(getInitialLang());
+  
+  useEffect(() => {
+    // Initialize google translate widget when Layout mounts
+    const initTranslate = () => {
+      if (window.google && window.google.translate && window.google.translate.TranslateElement) {
+        const el = document.getElementById('google_translate_element');
+        if (el && el.innerHTML === '') {
+          new window.google.translate.TranslateElement({
+            pageLanguage: 'en',
+            includedLanguages: 'en,hi,mr',
+            layout: window.google.translate.TranslateElement.InlineLayout.SIMPLE,
+            autoDisplay: false
+          }, 'google_translate_element');
+        }
+      }
+    };
+    
+    // It might take a second for the external script to load
+    const timeoutId = setTimeout(initTranslate, 500);
+    return () => clearTimeout(timeoutId);
+  }, []);
+
   const [hoveredNewsItem, setHoveredNewsItem] = useState(null);
   const [popoverPos, setPopoverPos] = useState({ left: 240 });
   const searchContainerRef = useRef(null);
@@ -276,6 +304,38 @@ export function Layout() {
             </div>
           </div>
           <div className={styles.headerRight}>
+            <div id="google_translate_element" style={{ display: 'none' }}></div>
+            <select 
+              value={currentLang} 
+              onChange={(e) => {
+                const lng = e.target.value;
+                setCurrentLang(lng);
+                
+                // Set the Google Translate cookie manually for bulletproof translation
+                const cookieStr = lng === 'en' ? '/en/en' : `/en/${lng}`;
+                document.cookie = `googtrans=${cookieStr}; path=/; domain=${window.location.hostname}`;
+                document.cookie = `googtrans=${cookieStr}; path=/;`;
+                
+                // Reload the page so the script picks up the new cookie instantly
+                window.location.reload();
+              }}
+              style={{
+                background: 'var(--card-bg)',
+                color: 'var(--text-primary)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '6px',
+                padding: '4px 8px',
+                fontSize: '13px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                marginRight: '8px',
+                appearance: 'auto'
+              }}
+            >
+              <option value="en">English</option>
+              <option value="hi">हिन्दी</option>
+              <option value="mr">मराठी</option>
+            </select>
             <button
               type="button"
               className={styles.headerIcon}

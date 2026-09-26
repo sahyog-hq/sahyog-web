@@ -1,0 +1,11 @@
+{
+  "search_placeholder": "Search incidents, units...",
+  "theme_dark": "Switch to light mode",
+  "theme_light": "Switch to dark mode",
+  "nav": {
+    "home": "Home",
+    "orchestrator": "Orchestrator",
+    "zone_control": "Zone Control",
+    "escalations": "Escalations"
+  }
+}

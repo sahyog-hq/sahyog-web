@@ -372,3 +372,22 @@ a:hover {
   border-color: rgba(248, 113, 113, 0.5) !important;
   box-shadow: 0 2px 8px rgba(248, 113, 113, 0.25) !important;
 }
+/* Hide Google Translate UI elements robustly */
+body, html {
+  top: 0 !important;
+  position: static !important;
+}
+iframe.goog-te-banner-frame,
+.goog-te-banner-frame,
+.skiptranslate > iframe.goog-te-banner-frame {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0px !important;
+}
+#google_translate_element,
+.goog-te-spinner-pos,
+#goog-gt-tt {
+  display: none !important;
+}
+
+/* End of ResQConnect Theme overrides */
