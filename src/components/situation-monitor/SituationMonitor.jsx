@@ -314,10 +314,10 @@ export function SituationMonitor() {
     return headlines;
   }, [activeSos, activeDisasters]);
 
-  // Dynamic crisp map tile layer: true black in dark mode, clean voyager in light mode
+  // Dynamic crisp map tile layer: using standard OpenStreetMap (free, no API key required)
   const mapTileUrl = theme === 'dark'
-    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png'
-    : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png';
+    ? 'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png' // Fallback free dark theme
+    : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 
   return (
     <div className={styles.situationSection}>
