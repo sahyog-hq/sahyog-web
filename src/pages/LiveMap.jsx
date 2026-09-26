@@ -338,7 +338,7 @@ export function LiveMap() {
                 if (Array.isArray(data)) {
                     const liveResponders = {};
                     data.forEach(user => {
-                        if ((user.role === 'volunteer' || user.role === 'coordinator') && isValidCoord(asNumber(user.lat), asNumber(user.lng))) {
+                        if ((user.role === 'volunteer' || user.role === 'coordinator' || user.role === 'vehicle') && isValidCoord(asNumber(user.lat), asNumber(user.lng))) {
                             liveResponders[user.id] = user;
                         }
                     });
@@ -380,7 +380,7 @@ export function LiveMap() {
             if (!id) return;
 
             // Check if it's a responder
-            if (data.role === 'volunteer' || data.role === 'coordinator') {
+            if (data.role === 'volunteer' || data.role === 'coordinator' || data.role === 'vehicle') {
                 setVolunteers(prev => ({
                     ...prev,
                     [id]: { ...prev[id], ...data, id, last_active: new Date().toISOString() }
@@ -408,6 +408,15 @@ export function LiveMap() {
 
         socket.on('volunteer_location_update', handleLocationUpdate);
         socket.on('location.update', handleLocationUpdate);
+        socket.on('fleet.location.broadcast', (data) => {
+            handleLocationUpdate({
+                id: data.vehicleId || data.id,
+                role: 'vehicle',
+                lat: data.lat,
+                lng: data.lng,
+                full_name: data.name || 'Vehicle',
+            });
+        });
         socket.on('heatmap:update', (payload = {}) => {
             const points = Array.isArray(payload.points)
                 ? payload.points.map(normalizeHeatPoint).filter(Boolean)

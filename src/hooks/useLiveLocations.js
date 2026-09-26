@@ -66,7 +66,7 @@ export function useLiveLocations() {
     return {
         locations,
         all,
-        volunteers: all.filter(l => l.role === 'volunteer'),
+        volunteers: all.filter(l => l.role === 'volunteer' || l.role === 'vehicle'),
         coordinators: all.filter(l => l.role === 'coordinator'),
         citizens: all.filter(l => l.role === 'citizen'),
         count: all.length,
