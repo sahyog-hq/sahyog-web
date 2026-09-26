@@ -110,7 +110,7 @@ function AppRoutes() {
       <Route
         path="/"
         element={
-          <ProtectedRoute allowedRoles={['admin', 'coordinator', 'volunteer', 'user', 'organization']}>
+          <ProtectedRoute allowedRoles={['admin', 'coordinator', 'volunteer', 'user', 'organization', 'vehicle', 'driver']}>
             <Layout />
           </ProtectedRoute>
         }

@@ -31,6 +31,12 @@ function RoleGate({ children, allowedRoles }) {
   const role = me?.role;
   const loginIntent = typeof window !== 'undefined' ? localStorage.getItem('loginIntent') : null;
 
+  if (role === 'vehicle' || role === 'driver') {
+    if (location.pathname !== '/drive' && location.pathname !== '/fleet-tracking') {
+      return <Navigate to="/drive" replace />;
+    }
+  }
+
   // ─── Intent / Role Handling ──────────────────────────────────
   // If user is organization role and trying to access an org-only route, allow them.
   // If user is accessing main portal with 'organization' role, allow them if allowedRoles includes 'organization'.

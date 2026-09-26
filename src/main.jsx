@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
+import './i18n';
 
 // Global fix for Google Translate breaking Material Symbols ligatures
 const protectIcons = () => {
