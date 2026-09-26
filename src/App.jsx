@@ -38,7 +38,8 @@ import { CoordinatorAnalyticsPage } from './pages/command-center/CoordinatorAnal
 import { ReportsPage } from './pages/command-center/ReportsPage';
 import AdminAuditLogs from './pages/AdminAuditLogs';
 import { OrgActivityLog } from './pages/org/OrgActivityLog';
-
+import FleetPortal from './pages/FleetPortal';
+import FleetTracker from './pages/FleetTracker';
 
 const publishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || import.meta.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
 if (!publishableKey) {
@@ -105,6 +106,7 @@ function AppRoutes() {
       <Route path="/sign-in/*" element={<SignInPage />} />
       <Route path="/sign-up/*" element={<SignUpPage />} />
       <Route path="/public-heatmap" element={<PublicHeatmap />} />
+      <Route path="/drive" element={<FleetPortal />} />
       <Route
         path="/"
         element={
@@ -136,6 +138,7 @@ function AppRoutes() {
         <Route path="server" element={<ServerMonitor />} />
         <Route path="audit-logs" element={<AdminAuditLogs />} />
         <Route path="command" element={<CommandDashboard />} />
+        <Route path="fleet-tracking" element={<FleetTracker />} />
       </Route>
 
       {/* Organization Onboarding — open to any authenticated user */}

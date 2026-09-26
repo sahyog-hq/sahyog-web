@@ -18,6 +18,7 @@ const navSections = [
       { to: '/', label: 'Home', icon: 'home' },
       { to: '/orchestrator', label: 'Orchestrator', icon: 'cell_tower' },
       { to: '/zones', label: 'Zone Control', icon: 'hub' },
+      { to: '/fleet-tracking', label: 'Fleet Tracking', icon: 'local_shipping' },
       { to: '/escalations', label: 'Escalations', icon: 'priority_high' },
       { to: '/map', label: 'Deployment Map', icon: 'map' },
     ]
