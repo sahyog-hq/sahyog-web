@@ -87,6 +87,8 @@ export const apiPaths = {
   tasksEscalated: '/api/v1/tasks/escalated',
 
   resources: '/api/v1/resources',
+  inventoryLocations: '/api/v1/inventory/locations',
+  ambulanceRoute: '/api/v1/inventory/ambulance-route',
 
   missing: '/api/v1/missing',
   markFound: (id) => `/api/v1/missing/${id}/found`,

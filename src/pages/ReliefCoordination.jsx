@@ -4,8 +4,9 @@ import { useDisastersList, useSosList, useUsersList } from '../api/hooks';
 import {
   useReliefZones, useCreateZone, useDeleteZone,
   useDisasterRequests, useCreateRequest, useAllOrganizations,
+  useInventoryLocations, useAmbulanceRoute,
 } from '../api/useReliefCoordination';
-import { MapContainer, TileLayer, Circle, Marker, Popup, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Circle, Marker, Popup, Polyline, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import styles from './DataList.module.css';
@@ -132,6 +133,12 @@ function ZoneMapTab({ disasterId, onOpenModal }) {
   const [radius, setRadius] = useState(500);
   const [zoneName, setZoneName] = useState('');
   const [autoAiEnabled, setAutoAiEnabled] = useState(true);
+  const [askAmbulance, setAskAmbulance] = useState(false);
+  const [ambulanceRoute, setAmbulanceRoute] = useState(null);
+  const [osrmLine, setOsrmLine] = useState([]);
+  const { data: inventoryLocations = [] } = useInventoryLocations();
+  const ambulanceMut = useAmbulanceRoute();
+  const { data: disasterRequests = [] } = useDisasterRequests(disasterId);
 
   const sosIcon = L.divIcon({
     className: 'sos-radar-blip-container',
@@ -146,6 +153,66 @@ function ZoneMapTab({ disasterId, onOpenModal }) {
     iconSize: [14, 14],
     iconAnchor: [7, 7]
   });
+
+  const inventoryIcon = L.divIcon({
+    className: 'inventory-pin',
+    html: `<div style="width:12px;height:12px;border-radius:50%;background:#34b27b;border:2px solid #e2e8f0;box-shadow:0 0 6px rgba(52,178,123,0.7);"></div>`,
+    iconSize: [12, 12],
+    iconAnchor: [6, 6],
+  });
+
+  const waypointIcon = (n) => L.divIcon({
+    className: 'ambulance-wp',
+    html: `<div style="width:22px;height:22px;border-radius:50%;background:#f59e0b;color:#111;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.35);">${n}</div>`,
+    iconSize: [22, 22],
+    iconAnchor: [11, 11],
+  });
+
+  const buildAmbulanceRoute = useCallback((zone) => {
+    if (!zone || zone.center_lat == null || zone.center_lng == null) return;
+    const latest = Array.isArray(disasterRequests) && disasterRequests.length
+      ? disasterRequests[0]
+      : null;
+    const needed = (latest?.items || DEFAULT_ITEMS).map((it) => it.resource_type || it.type).filter(Boolean);
+    ambulanceMut.mutate(
+      { lat: zone.center_lat, lng: zone.center_lng, needed },
+      {
+        onSuccess: async (plan) => {
+          setAmbulanceRoute(plan);
+          const pts = [
+            plan.start,
+            ...(plan.waypoints || []),
+            plan.destination,
+          ].filter((p) => p && p.lat != null && p.lng != null);
+          if (pts.length < 2) {
+            setOsrmLine(pts.map((p) => [p.lat, p.lng]));
+            return;
+          }
+          const coordStr = pts.map((p) => `${p.lng},${p.lat}`).join(';');
+          try {
+            const res = await fetch(
+              `https://router.project-osrm.org/route/v1/driving/${coordStr}?overview=full&geometries=geojson`,
+            );
+            const json = await res.json();
+            const coords = json?.routes?.[0]?.geometry?.coordinates || [];
+            setOsrmLine(coords.map(([lng, lat]) => [lat, lng]));
+          } catch {
+            setOsrmLine(pts.map((p) => [p.lat, p.lng]));
+          }
+        },
+      },
+    );
+  }, [ambulanceMut, disasterRequests]);
+
+  useEffect(() => {
+    if (!askAmbulance) {
+      setAmbulanceRoute(null);
+      setOsrmLine([]);
+      return;
+    }
+    const zone = zones?.[0];
+    if (zone) buildAmbulanceRoute(zone);
+  }, [askAmbulance, zones, buildAmbulanceRoute]);
 
   const handleMapClick = useCallback((latlng) => {
     setClickCenter(latlng);
@@ -245,6 +312,50 @@ function ZoneMapTab({ disasterId, onOpenModal }) {
             ))
           }
 
+          {/* Country-wide inventory resource pins */}
+          {(Array.isArray(inventoryLocations) ? inventoryLocations : []).map((loc) => (
+            loc.lat == null || loc.lng == null ? null : (
+              <Marker key={loc.id} position={[loc.lat, loc.lng]} icon={inventoryIcon}>
+                <Popup>
+                  <strong style={{ color: '#166534' }}>{loc.name}</strong>
+                  <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 4 }}>{loc.dept_name}</div>
+                  {loc.address ? <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>{loc.address}</div> : null}
+                  <div style={{ marginTop: 8, fontSize: 12, fontWeight: 700 }}>Resources at this site</div>
+                  <ul style={{ margin: '6px 0 0', paddingLeft: 16, fontSize: 12, maxHeight: 160, overflowY: 'auto' }}>
+                    {(loc.items || []).map((it, idx) => (
+                      <li key={idx}>
+                        <b>{it.item}</b> — {it.quantity}
+                        {it.description ? <span style={{ color: 'var(--color-text-muted)' }}> ({it.description})</span> : null}
+                      </li>
+                    ))}
+                  </ul>
+                  {loc.contact_person ? (
+                    <div style={{ fontSize: 11, marginTop: 8 }}>
+                      {loc.contact_person} {loc.mobile ? `· ${loc.mobile}` : ''}
+                    </div>
+                  ) : null}
+                </Popup>
+              </Marker>
+            )
+          ))}
+
+          {osrmLine.length > 1 && (
+            <Polyline positions={osrmLine} pathOptions={{ color: '#f59e0b', weight: 5, opacity: 0.9 }} />
+          )}
+          {(ambulanceRoute?.waypoints || []).map((wp, idx) => (
+            <Marker key={wp.id} position={[wp.lat, wp.lng]} icon={waypointIcon(idx + 1)}>
+              <Popup>
+                <strong>Stop {idx + 1}: {wp.name}</strong>
+                <div style={{ fontSize: 12, marginTop: 4 }}>Collect: {(wp.collects || []).join(', ')}</div>
+                <ul style={{ margin: '6px 0 0', paddingLeft: 16, fontSize: 12 }}>
+                  {(wp.items || []).map((it, i) => (
+                    <li key={i}>{it.item} — {it.quantity}</li>
+                  ))}
+                </ul>
+              </Popup>
+            </Marker>
+          ))}
+
           {/* Preview zone */}
           {clickCenter && (
             <Circle center={[clickCenter.lat, clickCenter.lng]} radius={radius}
@@ -302,12 +413,42 @@ function ZoneMapTab({ disasterId, onOpenModal }) {
               </div>
             </div>
 
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', background: askAmbulance ? 'rgba(245,158,11,0.12)' : 'var(--color-surface)', border: `1px solid ${askAmbulance ? '#f59e0b' : 'var(--color-border)'}`, borderRadius: 8, cursor: 'pointer', transition: 'all 0.2s' }} onClick={() => setAskAmbulance(!askAmbulance)}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span className="material-symbols-outlined" style={{ color: askAmbulance ? '#d97706' : 'var(--color-text-muted)', fontSize: 20 }}>
+                  ambulance
+                </span>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: askAmbulance ? '#d97706' : 'var(--color-text-primary)' }}>Ask Ambulance</span>
+                  <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>{askAmbulance ? 'Collect requested supplies then go to the zone' : 'Off — no collection route'}</span>
+                </div>
+              </div>
+              <div style={{ width: 36, height: 20, borderRadius: 10, background: askAmbulance ? '#f59e0b' : '#cbd5e1', position: 'relative', transition: 'all 0.2s' }}>
+                <div style={{ width: 16, height: 16, borderRadius: '50%', background: 'white', position: 'absolute', top: 2, left: askAmbulance ? 18 : 2, transition: 'all 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }} />
+              </div>
+            </div>
+
             <div style={{ padding: '8px 12px', background: 'var(--color-info-10)', borderRadius: 8, color: 'var(--color-info)', fontSize: 12, display: 'flex', gap: 8, alignItems: 'center' }}>
               <span className="material-symbols-outlined" style={{ fontSize: 16 }}>touch_app</span>
               Click anywhere on the map to place the zone.
             </div>
           </div>
         )}
+
+        <button
+          onClick={() => setAskAmbulance((v) => !v)}
+          title="Ask Ambulance"
+          style={{
+            display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 999,
+            background: askAmbulance ? '#f59e0b' : 'var(--color-surface)',
+            color: askAmbulance ? '#111' : 'var(--color-text-primary)',
+            border: `1px solid ${askAmbulance ? '#d97706' : 'var(--color-border)'}`,
+            boxShadow: '0 6px 16px rgba(0,0,0,0.12)', cursor: 'pointer', fontWeight: 700, fontSize: 12,
+          }}
+        >
+          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>ambulance</span>
+          Ask Ambulance
+        </button>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <button onClick={() => { setDrawing(!drawing); setClickCenter(null); }}
@@ -378,7 +519,10 @@ function ZoneMapTab({ disasterId, onOpenModal }) {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
                       <span style={{ width: 10, height: 10, borderRadius: '50%', background: SEVERITY_COLORS[z.severity] }} />
                       <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <span style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>{z.name}</span>
+                        <span
+                          style={{ fontWeight: 500, color: 'var(--color-text-primary)', cursor: askAmbulance ? 'pointer' : 'default' }}
+                          onClick={() => askAmbulance && buildAmbulanceRoute(z)}
+                        >{z.name}</span>
                         {totalActive > 0 && (
                           <span style={{ fontSize: 10, color: 'var(--color-warning)' }}>
                             {totalActive} active assignment(s)

@@ -75,6 +75,26 @@ export function useCreateRequest(disasterId) {
 
 // ─── Org list (for admin to select recipients) ───────────────────────
 
+export function useInventoryLocations() {
+    const { getToken, isSignedIn } = useAuth();
+    return useQuery({
+        queryKey: ['inventory-locations'],
+        queryFn: () => apiRequest('/api/v1/inventory/locations', {}, getToken),
+        enabled: isSignedIn === true,
+        staleTime: 5 * 60 * 1000,
+    });
+}
+
+export function useAmbulanceRoute() {
+    const { getToken } = useAuth();
+    return useMutation({
+        mutationFn: (data) => apiRequest('/api/v1/inventory/ambulance-route', {
+            method: 'POST',
+            body: JSON.stringify(data),
+        }, getToken),
+    });
+}
+
 export function useAllOrganizations() {
     const { getToken, isSignedIn } = useAuth();
     return useQuery({
